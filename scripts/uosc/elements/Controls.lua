@@ -143,7 +143,6 @@ function Controls:init_options()
 					anchor_id = 'controls',
 					on_click = function() mp.command(params[2]) end,
 					tooltip = tooltip,
-					count_prop = 'sub',
 				})
 				table_assign(control, {element = element, sizing = 'static', scale = 1, ratio = 1})
 				if badge then self:register_badge_updater(badge, element) end

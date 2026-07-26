@@ -17,30 +17,6 @@ function TopBarButton:init(id, props)
   self.command = props.command
 end
 
--- function TopBarButton:handle_click()
--- 	mp.command(type(self.command) == 'function' and self.command() or self.command)
--- end
-
--- function TopBarButton:render()
--- 	local visibility = self:get_visibility()
--- 	if visibility <= 0 then return end
--- 	local ass = assdraw.ass_new()
-
--- 	-- Background on hover
--- 	if self.proximity_raw == 0 then
--- 		ass:rect(self.ax, self.ay, self.bx, self.by, {color = self.background, opacity = visibility})
--- 	end
--- 	cursor:zone('primary_click', self, function() self:handle_click() end)
-
--- 	local width, height = self.bx - self.ax, self.by - self.ay
--- 	local icon_size = math.min(width, height) * 0.5
--- 	ass:icon(self.ax + width / 2, self.ay + height / 2, icon_size, self.icon, {
--- 		opacity = visibility, border = options.text_border * state.scale,
--- 	})
-
--- 	return ass
--- end
-
 --[[ TopBar ]]
 
 ---@class TopBar : Element

@@ -398,11 +398,6 @@ function has_any_extension(path, extensions)
 	return false
 end
 
----@return string
-function get_default_directory()
-	return mp.command_native({'expand-path', options.default_directory})
-end
-
 -- Serializes path into its semantic parts.
 ---@param path string
 ---@return nil|{path: string; is_root: boolean; dirname?: string; basename: string; filename: string; extension?: string;}
@@ -578,63 +573,6 @@ function navigate_item(delta)
 	if state.has_playlist then return navigate_playlist(delta) else return navigate_directory(delta) end
 end
 
--- Can't use `os.remove()` as it fails on paths with unicode characters.
--- Returns `result, error`, result is table of:
--- `status:number(<0=error), stdout, stderr, error_string, killed_by_us:boolean`
----@param path string
-function delete_file(path)
-	if state.platform == 'windows' then
-		if options.use_trash then
-			local ps_code = [[
-				Add-Type -AssemblyName Microsoft.VisualBasic
-				[Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile('__path__', 'OnlyErrorDialogs', 'SendToRecycleBin')
-			]]
-
-			local escaped_path = string.gsub(path, "'", "''")
-			escaped_path = string.gsub(escaped_path, '’', '’’')
-			escaped_path = string.gsub(escaped_path, '%%', '%%%%')
-			ps_code = string.gsub(ps_code, '__path__', escaped_path)
-			args = {'powershell', '-NoProfile', '-Command', ps_code}
-		else
-			args = {'cmd', '/C', 'del', path}
-		end
-	else
-		if options.use_trash then
-			--On Linux and Macos the app trash-cli/trash must be installed first.
-			args = {'trash', path}
-		else
-			args = {'rm', path}
-		end
-	end
-	return mp.command_native({
-		name = 'subprocess',
-		args = args,
-		playback_only = false,
-		capture_stdout = true,
-		capture_stderr = true,
-	})
-end
-
-function delete_file_navigate(delta)
-	local path, playlist_pos = state.path, state.playlist_pos
-	local is_local_file = path and not is_protocol(path)
-
-	if navigate_item(delta) then
-		if state.has_playlist then
-			mp.commandv('playlist-remove', playlist_pos - 1)
-		end
-	else
-		mp.command('stop')
-	end
-
-	if is_local_file then
-		if Menu:is_open('open-file') then
-			Elements:maybe('menu', 'delete_value', path)
-		end
-		delete_file(path)
-	end
-end
-
 function serialize_chapter_ranges(normalized_chapters)
 	local ranges = {}
 	local simple_ranges = {
@@ -792,16 +730,6 @@ function find_active_keybindings(key)
 	return not key and active or active[key]
 end
 
----@param type 'sub'|'audio'|'video'
----@param path string
-function load_track(type, path)
-	mp.commandv(type .. '-add', path, 'cached')
-	-- If subtitle track was loaded, assume the user also wants to see it -- 反对
-	--if type == 'sub' then
-		--mp.commandv('set', 'sub-visibility', 'yes')
-	--end
-end
-
 ---@return string|nil
 function get_clipboard()
 	local result = mp.command_native({
@@ -841,19 +769,7 @@ function render()
 
 	-- Actual rendering
 	local ass = assdraw.ass_new()
---[[
-	-- Idle indicator
-	if state.is_idle and not Manager.disabled.idle_indicator then
-		local smaller_side = math.min(display.width, display.height)
-		local center_x, center_y, icon_size = display.width / 2, display.height / 2, math.max(smaller_side / 4, 56)
-		ass:icon(center_x, center_y - icon_size / 4, icon_size, 'not_started', {
-			color = fg, opacity = config.opacity.idle_indicator,
-		})
-		ass:txt(center_x, center_y + icon_size / 2, 8, 'Drop files or URLs to play here', {
-			size = icon_size / 4, color = fg, opacity = config.opacity.idle_indicator,
-		})
-	end
-]]
+
 	-- Audio indicator
 	if state.is_audio and not state.has_image and not Manager.disabled.audio_indicator
 		and not (state.pause and options.pause_indicator == 'static') then
